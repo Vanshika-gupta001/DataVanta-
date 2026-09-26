@@ -1,102 +1,45 @@
-# VoltRelay Energy — Battery-Swap Network Analysis
-**Gradient Learnings Data Analytics Hackathon | Submission**
+# VoltRelay — Battery Lifecycle & Supplier Quality Analytics
 
-> **Data note:** `swap_events.csv` (3,877,013 rows) was not available in this environment at
-> analysis time. This report's pipeline, cleaning logic, and joins are fully built and tested
-> end-to-end against the seven other real files provided (riders, batteries, stations,
-> fleet_partners, city_daily_context, support_tickets, station_hourly_status — 1.48M rows).
-> Findings explicitly marked **[REAL DATA]** below come from those files directly. Findings
-> marked **[PENDING]** require the real swap_events file to be dropped into the notebook (one
-> path variable) — the notebook then reproduces Q1–Q6 with real numbers, no code changes needed.
+Hackathon submission analyzing EV battery-swap fleet operations (batteries,
+stations, support tickets, city context, fleet partners).
 
----
+**Data gap, disclosed upfront:** `swap_events.csv` (rider-level swap
+transactions) was referenced in the brief but never made available. This
+project is scoped to what the real, uploaded data actually supports —
+battery/supplier quality, station operational reliability, and support-ticket
+patterns — rather than filling the gap with invented numbers.
 
-## 1. Problem Understanding
+## Key Finding
 
-VoltRelay Energy operates a battery-swapping network for 2W/3W gig and delivery riders across
-six Indian cities. Over 18 months the network grew stations and completed-swap volume, but
-service failures rose, new-rider retention fell, and per-swap profitability eroded. The task is
-to determine, from the data, what is actually driving these three outcomes — and what to
-prioritize for the next operating budget (more stations, more batteries, a pricing rollout, or
-fleet-partner exclusivity) — without assuming a predetermined answer.
+Kyron-supplied batteries degrade roughly 2x faster than the other two
+suppliers and retire at an **88% rate vs 0%** for Amptek/Cellora
+(Welch's t-test, p < 0.001; Cohen's d ≈ 0.78). Manufacturing-lot, firmware,
+pack-type, and fleet-age were checked as possible confounds and ruled out —
+the effect holds across all of them. Flagged as a procurement risk, not
+yet a proven root cause (see report for what would confirm it).
 
-## 2. Analytical Approach
+## Files
 
-1. **Data understanding** — loaded and row-count-validated all eight tables against the documented schema.
-2. **Deliberate cleaning** — excluded internal test stations, de-duplicated offline-sync near-duplicate
-   swap records, corrected the firmware v3.2.0 timezone bug (Mar 10–Apr 14 2025), standardized
-   `home_city` spellings, and nulled implausible `km_since_last_swap` values for range analysis only —
-   each choice stated explicitly rather than silently applied.
-3. **Scale-appropriate tooling** — the 108MB / 1.48M-row `station_hourly_status.csv` is queried directly
-   via DuckDB SQL rather than loaded fully into pandas, keeping the notebook runnable on a standard
-   Colab instance.
-4. **Six Core Questions**, each answered with a join across the relevant real tables (stations,
-   batteries, fleet_partners, riders) plus the swap fact table, backed by a chart.
-5. **Root-cause framing for retention** — distinguishes candidate primary drivers (first-swap failure/wait)
-   from secondary contributors (channel, partner), consistent with the brief's request not to overclaim causation.
+| File | What it is |
+|---|---|
+| [`voltrelay_analysis.ipynb`](./voltrelay_analysis.ipynb) | Full notebook — data quality checks, EDA, all core questions, runs top-to-bottom |
+| [`REPORT.md`](./REPORT.md) | Detailed write-up: methodology, findings, statistical evidence, recommendations |
+| [`charts/`](./charts) | Generated visualizations (fleet composition, degradation rates, confound checks) |
+| [`tables/`](./tables) | Summary CSVs backing the charts and report tables |
+| [`linkedin_post.md`](./linkedin_post.md) | Post used for the hackathon's personal-branding streak |
 
-## 3. Key Insights
+## How to Run
 
-### [REAL DATA] Battery supplier degradation gap
-Kyron packs show an average State-of-Health drop of **~35.5 points** since commissioning, versus
-**~18.2–18.3 points** for Cellora and Amptek — roughly double. This is a genuine signal in the
-battery ledger, independent of swap volume, and is the strongest equipment-level hypothesis this
-analysis surfaced for the "equipment or supplier cohorts that stand out" question (Core Q4).
+```bash
+pip install pandas numpy scipy duckdb matplotlib
+jupyter nbconvert --to notebook --execute voltrelay_analysis.ipynb
+```
 
-### [REAL DATA] Telemetry quality tracks connectivity tier, as documented
-Stations flagged `poor` connectivity report missing/partial telemetry on **~11%** of hourly rows,
-versus **~1%** at `good`-connectivity stations. Any station-uptime or stockout claim should be
-read through this lens — poor-connectivity stations likely look artificially "fine" simply because
-their bad hours are more often missing, not because they perform better.
+## Scope Notes
 
-### [REAL DATA] Fleet partner revenue concentration
-FeastFly and ZipDrop are, by a wide margin, the two largest partner-revenue contributors among the
-twelve fleet partners (joined via `fleet_partners.csv`). This is revenue, not contribution margin —
-the optional "Fleet Partner Value" question (is the largest partner also the most valuable once
-energy and battery wear are netted out) is answered once real swap-level costs are available.
-
-### [PENDING] Network trend direction, failure concentration, pricing effects, retention drivers
-Core Questions 1, 2, 5, and 6 are fully coded and chart-ready in the notebook but currently run on
-a small synthetic placeholder standing in for the missing `swap_events.csv`. Numbers from that
-placeholder are **not reported here** as findings — only the real-data findings above are.
-
-## 4. Supporting Visualizations
-
-See the accompanying notebook (`VoltRelay_Analysis.ipynb`) for all charts:
-- Monthly completed swaps / failure rate / revenue-per-swap (Q1)
-- Queue wait & failure rate by hour of day, worst-10 stations (Q2)
-- Failure rate by charger generation / expansion wave / location type, telemetry quality by
-  connectivity tier (Q3, real data)
-- SoH drop by battery supplier (Q4, real data)
-- Revenue by tariff and by fleet partner (Q5, partner join real)
-- Return rate by first-swap wait bucket and signup channel (Q6)
-
-## 5. Business Findings
-
-- Equipment risk is concentrated, not diffuse: one supplier (Kyron) drives a disproportionate share
-  of battery degradation. If swap-level data confirms Kyron packs also show more delivered-range
-  complaints or shorter effective range, that reframes "more batteries" as "different batteries."
-- Network telemetry is not evenly trustworthy: poor-connectivity stations' data gaps mean current
-  uptime dashboards likely understate their problems. Any capacity-planning decision leaning on
-  station-level telemetry should weight this.
-- Partner revenue concentration (FeastFly, ZipDrop) raises the stakes on the "is our biggest
-  partner our best partner" question — worth resolving before considering any exclusivity deal.
-
-## 6. Actionable Recommendations
-
-1. **Investigate the Kyron battery cohort specifically** — pull swap-level range/complaint data
-   for Kyron-sourced packs once available; if confirmed, prioritize supplier renegotiation or
-   accelerated Kyron retirement over blanket "more batteries" spend.
-2. **Fix telemetry at poor-connectivity stations before trusting their uptime numbers** — a
-   connectivity upgrade is cheap relative to a bad capital-allocation decision made on incomplete data.
-3. **Run contribution-margin (not just revenue) analysis per fleet partner** before any exclusivity
-   commitment — recommend against the "long-term exclusive with largest fleet partner" budget option
-   until this is resolved.
-4. *(Complete once real swap_events data confirms Q1/Q2/Q5/Q6 trends — this section should name
-   which of the four budget options — stations / batteries / pricing rollout / fleet exclusivity —
-   the evidence supports most strongly, and what to do instead or in addition.)*
-
----
-*Prepared for the Gradient Learnings Data Analytics Hackathon. Analysis notebook, cleaning code,
-and this report will reproduce fully once the real `swap_events.csv(.gz)` file replaces the
-placeholder — see the note at the top of the notebook.*
+- Two files present in the raw upload were excluded as unrelated to this
+  dataset: `business_sales_sample.csv` and `tasks.r`.
+- `STN-TST-01` / `STN-TST-02` (internal test rigs) are excluded from all
+  station-level aggregates.
+- Full data-quality decisions and their reasoning are documented in the
+  notebook's first section, not repeated per analysis.
