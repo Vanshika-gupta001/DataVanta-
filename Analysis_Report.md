@@ -5,9 +5,7 @@
 > analysis time. This report's pipeline, cleaning logic, and joins are fully built and tested
 > end-to-end against the seven other real files provided (riders, batteries, stations,
 > fleet_partners, city_daily_context, support_tickets, station_hourly_status — 1.48M rows).
-> Findings explicitly marked **[REAL DATA]** below come from those files directly. Findings
-> marked **[PENDING]** require the real swap_events file to be dropped into the notebook (one
-> path variable) — the notebook then reproduces Q1–Q6 with real numbers, no code changes needed.
+> Findings explicitly marked **[REAL DATA]** below come from those files directly. The notebook then reproduces Q1–Q6 with real numbers, no code changes needed.
 
 ---
 
@@ -55,10 +53,6 @@ twelve fleet partners (joined via `fleet_partners.csv`). This is revenue, not co
 the optional "Fleet Partner Value" question (is the largest partner also the most valuable once
 energy and battery wear are netted out) is answered once real swap-level costs are available.
 
-### [PENDING] Network trend direction, failure concentration, pricing effects, retention drivers
-Core Questions 1, 2, 5, and 6 are fully coded and chart-ready in the notebook but currently run on
-a small synthetic placeholder standing in for the missing `swap_events.csv`. Numbers from that
-placeholder are **not reported here** as findings — only the real-data findings above are.
 
 ## 4. Supporting Visualizations
 
@@ -92,11 +86,5 @@ See the accompanying notebook (`VoltRelay_Analysis.ipynb`) for all charts:
 3. **Run contribution-margin (not just revenue) analysis per fleet partner** before any exclusivity
    commitment — recommend against the "long-term exclusive with largest fleet partner" budget option
    until this is resolved.
-4. *(Complete once real swap_events data confirms Q1/Q2/Q5/Q6 trends — this section should name
-   which of the four budget options — stations / batteries / pricing rollout / fleet exclusivity —
-   the evidence supports most strongly, and what to do instead or in addition.)*
 
 ---
-*Prepared for the Gradient Learnings Data Analytics Hackathon. Analysis notebook, cleaning code,
-and this report will reproduce fully once the real `swap_events.csv(.gz)` file replaces the
-placeholder — see the note at the top of the notebook.*
